@@ -1,4 +1,7 @@
-const { db, admin } = require("../util/admin");
+const {
+  db,
+  admin
+} = require("../util/admin");
 const firebase = require("firebase");
 const config = require("../util/config");
 firebase.initializeApp(config);
@@ -16,7 +19,10 @@ exports.signup = (req, res) => {
     username: req.body.username,
   };
 
-  const { valid, errors } = validateSignup(newUser);
+  const {
+    valid,
+    errors
+  } = validateSignup(newUser);
 
   if (!valid) return res.status(400).json(errors);
   const noimage = "noimage.png";
@@ -74,7 +80,10 @@ exports.login = (req, res) => {
     password: req.body.password,
   };
 
-  const { valid, errors } = validateLogin(user);
+  const {
+    valid,
+    errors
+  } = validateLogin(user);
   if (!valid) return res.status(400).json(errors);
 
   firebase
@@ -226,3 +235,60 @@ exports.getAuthenticatedUser = (req, res) => {
       });
     });
 };
+//==================NOTIFICATION ROUTES=============
+exports.markNotificationRead = (req, res) => {
+  let batch = db.batch()
+  req.body.forEach(notificationId => {
+    const notification = db.doc(`/notification/${notificationId}`)
+    batch.update(notification, {
+      read: true
+    })
+  })
+  batch.commit().then(() => {
+    return res.json({
+      msg: "notification has been marked as read"
+    })
+  }).catch(err => {
+    console.error(err)
+    return res.status(500).json(err)
+  })
+}
+//===============================end of marked as read end point===========
+//===== get any user detail============
+exports.getSingleUserDetails = (req, res) => {
+  let userData = {}
+  db.doc(`/users/${req.params.username}`).get().then(doc => {
+      if (doc.exists) {
+        userData.user = doc.data()
+        return db.collection("post").where("username", "==", req.params.username)
+          .orderBy("createdAt", "desc")
+          .get()
+      } else {
+        return res.status(404).json({
+          error: "User not found"
+        })
+      }
+    })
+    .then(data => {
+      userData.post = []
+      data.forEach(doc => {
+        userData.post.push({
+          body: doc.data().body,
+          createdAt: doc.data().createdAt,
+          username: doc.data().username,
+          userImage: doc.data().userImage,
+          likeCount: doc.data().likeCount,
+          commentCount: doc.data().commentCount,
+          postId: doc.id
+        })
+      })
+      return res.json(userData)
+    })
+    .catch(err => {
+      console.error(err)
+      return res.status(500).json({
+        error: err
+      })
+    })
+}
+//=====================end of function========================

@@ -15,13 +15,19 @@ const {
   login,
   uploadImage,
   addUserDetails,
-  getAuthenticatedUser
+  getAuthenticatedUser,
+  getSingleUserDetails,
+  markNotificationRead
 } = require("./handlers/users");
 const FBAuth = require("./util/FBAuth");
 const {
   db
 } = require("./util/admin")
 
+
+//=======================================
+//post , comment and likes endpoints 
+//================================
 app.get("/posts", getAllPost);
 app.post("/post", FBAuth, createPost);
 app.get("/post/:postId", getPost)
@@ -29,17 +35,25 @@ app.post("/post/:postId/comment", FBAuth, commentOnPost)
 app.get("/post/:postId/like", FBAuth, likePost)
 app.get("/post/:postId/unlike", FBAuth, unlikePost)
 app.delete("/post/:postId", FBAuth, deletePost)
+//====================================================
 
 
-
+//=======================================
+//users  endpoint
+//================================
 app.post("/signup", signup);
 app.post("/login", login);
 app.post("/user/image", FBAuth, uploadImage);
 app.post('/user', FBAuth, addUserDetails)
 app.get("/user", FBAuth, getAuthenticatedUser)
+app.get("/user/:username", getSingleUserDetails)
+app.post("/notification", FBAuth, markNotificationRead)
+//==================================================
 
 exports.api = functions.https.onRequest(app);
 
+//=======================================================
+//notification functions
 exports.createNotificationOnLike = functions.region('us-central1').firestore.document(`likes/{id}`).onCreate(snapshot => {
   db.doc(`/post/${snapshot.data().postId}`).get().then(doc => {
       if (doc.exists) {
@@ -90,3 +104,4 @@ exports.createNotificationOnComment = functions.region('us-central1').firestore.
       return
     })
 })
+//========================================================================================
