@@ -56,7 +56,7 @@ exports.api = functions.https.onRequest(app);
 //notification functions
 exports.createNotificationOnLike = functions.region('us-central1').firestore.document(`likes/{id}`).onCreate(snapshot => {
   db.doc(`/post/${snapshot.data().postId}`).get().then(doc => {
-      if (doc.exists) {
+      if (doc.exists && doc.data().username !== snapshot.data().username) {
         return db.doc(`/notification/${snapshot.id}`).set({
           createdAt: new Date().toISOString(),
           recipient: doc.data().username,
@@ -86,7 +86,7 @@ exports.deleteNotificationOnUnlike = functions.region("us-central1").firestore.d
 
 exports.createNotificationOnComment = functions.region('us-central1').firestore.document("comments/{id}").onCreate(snapshot => {
   db.doc(`/post/${snapshot.data().postId}`).get().then(doc => {
-      if (doc.exists) {
+      if (doc.exists && doc.data().username !== snapshot.data().username) {
         return db.doc(`/notification/${snapshot.id}`).set({
           createdAt: new Date().toISOString(),
           recipient: doc.data().username,
@@ -104,4 +104,49 @@ exports.createNotificationOnComment = functions.region('us-central1').firestore.
       return
     })
 })
-//========================================================================================
+//==========================USER IMAGE CHANGE=======================================================
+
+exports.imageChange = functions.region("us-central1").firestore.document('/user/{userId}')
+  .onUpdate(change => {
+    if (change.before.data().imageUrl !== change.after.data().imageUrl) {
+      let batch = db.batch()
+      return db.collection('post').where("username", "==", change.before.data().username).get()
+        .then((data) => {
+          data.forEach(doc => {
+            const post = db.doc(`/post/${doc.id}`)
+            batch.update(post, {
+              userImage: change.after.data().imageUrl
+            })
+          })
+          return batch.commit()
+        })
+    }
+  })
+
+exports.onPostDelete = functions.region("us-central1").firestore.document('/post/{postId}')
+  .onDelete((snapshot, context) => {
+    const postId = context.params.postId
+    const batch = db.batch()
+    return db.collection('comments').where("postId", "==", postId).get()
+      .then(data => {
+        data.forEach(doc => {
+          batch.delete(db.doc(`/comments/${doc.id}`))
+        })
+        return db.collection('likes').where("postId", "==", postId).get()
+      })
+      .then(data => {
+        data.forEach(doc => {
+          batch.delete(db.doc(`/likes/${doc.id}`))
+        })
+        return db.collection('notification').where("postId", "==", postId).get()
+      })
+      .then(data => {
+        data.forEach(doc => {
+          batch.delete(db.doc(`/notification/${doc.id}`))
+        })
+        return batch.commit()
+      }).
+    catch(err => {
+      console.error(err)
+    })
+  })

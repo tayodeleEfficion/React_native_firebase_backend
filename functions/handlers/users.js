@@ -11,6 +11,8 @@ const {
   reduceUserDetails,
 } = require("../util/validators");
 
+
+//==================SIGNUP ROUTES=============
 exports.signup = (req, res) => {
   const newUser = {
     email: req.body.email,
@@ -69,10 +71,12 @@ exports.signup = (req, res) => {
         });
       }
       return res.status(500).json({
-        err: err.code,
+        GENERAL: "SOMETHING WENT WRONG PLEASE TRY AGAIN"
       });
     });
 };
+
+//==================LOGIN ROUTES=============
 
 exports.login = (req, res) => {
   const user = {
@@ -113,6 +117,7 @@ exports.login = (req, res) => {
 let imageFilename;
 let imageToBeUploaded = {};
 
+//==================IMAGEUPLOAD ROUTES=============
 exports.uploadImage = (req, res) => {
   const Busboy = require("busboy");
   const path = require("path");
@@ -171,7 +176,7 @@ exports.uploadImage = (req, res) => {
   busboy.end(req.rawBody);
 };
 
-//add user details
+//==================ADD USERS DETIAL ROUTES=============
 exports.addUserDetails = (req, res) => {
   let userDetails = reduceUserDetails(req.body);
   db.doc(`/users/${req.user.username}`)
@@ -187,6 +192,7 @@ exports.addUserDetails = (req, res) => {
       });
     });
 };
+//==================AUTHENTICATED USER'S ROUTES=============
 
 exports.getAuthenticatedUser = (req, res) => {
   let userData = {};

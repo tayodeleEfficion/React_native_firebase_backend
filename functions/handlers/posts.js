@@ -2,6 +2,8 @@ const {
   db
 } = require("../util/admin");
 
+//==================GETALL POSTS ROUTES=============
+
 exports.getAllPost = (req, res) => {
   db.collection("/post")
     .orderBy("createdAt", "desc")
@@ -14,6 +16,7 @@ exports.getAllPost = (req, res) => {
           body: doc.data().body,
           createdAt: doc.data().createdAt,
           username: doc.data().username,
+          userImage: doc.data().userImage
         });
       });
       return res.json(post);
@@ -22,6 +25,7 @@ exports.getAllPost = (req, res) => {
       console.error(err);
     });
 };
+//==================CREATE POST ROUTES=============
 
 exports.createPost = (req, res) => {
   if (req.body.body.trim() === "") {
@@ -51,7 +55,7 @@ exports.createPost = (req, res) => {
       });
     });
 };
-
+//==================GET SINGLE ROUTES=============
 exports.getPost = (req, res) => {
   let postData = {};
   db.doc(`/post/${req.params.postId}`)
@@ -83,6 +87,7 @@ exports.getPost = (req, res) => {
       });
     });
 };
+//==================COMMENT ROUTES=============
 exports.commentOnPost = (req, res) => {
   if (req.body.body.trim() === "")
     return res.status(400).json({
@@ -119,6 +124,7 @@ exports.commentOnPost = (req, res) => {
       });
     });
 };
+//==================LIKE ROUTES=============
 
 exports.likePost = (req, res) => {
   const likeDocument = db
@@ -173,7 +179,7 @@ exports.likePost = (req, res) => {
 };
 
 
-
+//==================UNLIKE ROUTES=============
 exports.unlikePost = (req, res) => {
   const likeDocument = db
     .collection("likes")
