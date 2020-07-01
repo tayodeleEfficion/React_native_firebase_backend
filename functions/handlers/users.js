@@ -1,14 +1,11 @@
-const {
-  db,
-  admin
-} = require("../util/admin");
+const { db, admin } = require("../util/admin");
 const firebase = require("firebase");
 const config = require("../util/config");
 firebase.initializeApp(config);
 const {
   validateSignup,
   validateLogin,
-  reduceUserDetails
+  reduceUserDetails,
 } = require("../util/validators");
 
 exports.signup = (req, res) => {
@@ -19,10 +16,7 @@ exports.signup = (req, res) => {
     username: req.body.username,
   };
 
-  const {
-    valid,
-    errors
-  } = validateSignup(newUser);
+  const { valid, errors } = validateSignup(newUser);
 
   if (!valid) return res.status(400).json(errors);
   const noimage = "noimage.png";
@@ -80,10 +74,7 @@ exports.login = (req, res) => {
     password: req.body.password,
   };
 
-  const {
-    valid,
-    errors
-  } = validateLogin(user);
+  const { valid, errors } = validateLogin(user);
   if (!valid) return res.status(400).json(errors);
 
   firebase
@@ -124,8 +115,8 @@ exports.uploadImage = (req, res) => {
   busboy.on("file", (fieldname, file, filename, encoding, mimetype) => {
     if (mimetype !== "image/jpeg" && mimetype !== "image/png") {
       return res.json({
-        Error: "wrong file type submitted"
-      })
+        Error: "wrong file type submitted",
+      });
     }
     const imageExtension = filename.split(".")[filename.split(".").length + 1];
     imageFilename = `${Math.round(
@@ -134,7 +125,7 @@ exports.uploadImage = (req, res) => {
     const filePath = path.join(os.tmpdir(), imageFilename);
     imageToBeUploaded = {
       filePath,
-      mimetype
+      mimetype,
     };
     file.pipe(fs.createWriteStream(filePath));
   });
@@ -153,18 +144,18 @@ exports.uploadImage = (req, res) => {
       .then(() => {
         const imageUrl = `https://firebasestorage.googleapis.com/v0/b/${config.storageBucket}/o/${imageFilename}?alt=media`;
         return db.doc(`/users/${req.user.username}`).update({
-          imageUrl
+          imageUrl,
         });
       })
       .then(() => {
         return res.json({
-          message: "image uploaded successfully"
+          message: "image uploaded successfully",
         });
       })
       .catch((err) => {
         console.error(err);
         return res.status(500).json({
-          error: err.code
+          error: err.code,
         });
       });
   });
@@ -173,36 +164,65 @@ exports.uploadImage = (req, res) => {
 
 //add user details
 exports.addUserDetails = (req, res) => {
-  let userDetails = reduceUserDetails(req.body)
-  db.doc(`/users/${req.user.username}`).update(userDetails).then(() => {
-    return res.json({
-      msg: "details added successfully"
+  let userDetails = reduceUserDetails(req.body);
+  db.doc(`/users/${req.user.username}`)
+    .update(userDetails)
+    .then(() => {
+      return res.json({
+        msg: "details added successfully",
+      });
     })
-  }).catch(err => {
-    return res.status(500).json({
-      err: err.code
-    })
-  })
-}
+    .catch((err) => {
+      return res.status(500).json({
+        err: err.code,
+      });
+    });
+};
 
 exports.getAuthenticatedUser = (req, res) => {
-  let userData = {}
-  db.doc(`/users/${req.user.username}`).get().then(doc => {
+  let userData = {};
+  db.doc(`/users/${req.user.username}`)
+    .get()
+    .then((doc) => {
       if (doc.exists) {
-        userData.credential = doc.data()
-        return db.collection("likes").where("username", "==", req.user.username).get()
+        userData.credential = doc.data();
+        return db
+          .collection("likes")
+          .where("username", "==", req.user.username)
+          .get();
       }
-    }).then(data => {
-      userData.likes = []
-      data.forEach(doc => {
-        userData.likes.push(doc.data())
-      })
-      return res.json(userData)
     })
-    .catch(err => {
-      console.error(err)
+    .then((data) => {
+      userData.likes = [];
+      data.forEach((doc) => {
+        userData.likes.push(doc.data());
+      });
+      return db
+        .collection("notification")
+        .where("recipient", "==", req.user.username)
+        .orderBy("createdAt", "desc")
+        .limit(10)
+        .get();
+    })
+    .then((data) => {
+      userData.notification = [];
+      data.forEach((doc) => {
+        userData.notification.push({
+          recipient: doc.data().recipient,
+          sender: doc.data().sender,
+          createdAt: doc.data().createdAt,
+          postId: doc.data().postId,
+          type: doc.data().type,
+          read: doc.data().read,
+          notificationId: doc.id,
+        });
+      });
+      return res.json(userData);
+    })
+    .catch((err) => {
+      console.error(err);
       res.status(500).json({
-        error: err.code
-      })
-    })
-}
+        error: err.code,
+      });
+    });
+};

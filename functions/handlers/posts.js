@@ -104,6 +104,10 @@ exports.commentOnPost = (req, res) => {
           error: "post not found",
         });
       }
+      return doc.ref.update({
+        comments: doc.data().commentCount + 1
+      })
+    }).then(() => {
       return db.collection("comments").add(newComment);
     })
     .then(() => {
@@ -218,3 +222,33 @@ exports.unlikePost = (req, res) => {
       });
     });
 };
+//==================================================
+//DELETE POST====================================
+//===============================================
+exports.deletePost = (req, res) => {
+  const document = db.doc(`/post/${req.params.postId}`)
+  document.get().then(doc => {
+      if (!doc.exists) {
+        return res.status(404).json({
+          error: "POST NOT FOUND"
+        })
+      }
+      if (doc.data().username !== req.user.username) {
+        return res.status(403).json({
+          eror: "UNAUTHORIZED ACTION"
+        })
+      } else {
+        return document.delete()
+      }
+    }).then(() => {
+      res.json({
+        msg: "POST DELETED SUCCESSFULLY"
+      })
+    })
+    .catch(err => {
+      console.error(err)
+      return res.status(500).json({
+        error: err.code
+      })
+    })
+}
